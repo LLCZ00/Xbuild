@@ -27,10 +27,11 @@ xbuild.sh --tool-dir=$HOME/Desktop/tools --source-dir=/tmp/source arm-eabi
 4. Builds GCC and Binutils tools, installing them in the directory defined by default or *-t*,*--tool-dir*
 5. Checks to ensure new tools actually exist, before returning 'Success' message.
 ## GCC/Binutils Configuration
-Currently, the best way to add arguments to the *configure* command is to just edit the script. See link below for details.<br/>
+Currently, the best way to add arguments to the *configure* file is to just edit the script. See link below for details on config options.<br/>
 [GCC Config Documentation](https://gcc.gnu.org/install/configure.html)<br/>
 ## Issues
 - GCC/Binutils download URLs are currently hardcoded in, which could become an issue in the future.
+- Not tested super thoroughly, because it takes like 20 minutes to build GCC
 - Downloading GCC/Binutils source code takes forever. Nothing I can really do about it, but it does.
 - Building GCC also takes forever. See point about download time.
  ## To do
