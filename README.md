@@ -18,7 +18,6 @@ Options:
 
 Examples:
 xbuild.sh i386
-xbuild.sh --gcc-build=--disable-nls,--enable-languages=c --bin-build=--disable-werror x86_64-pc-linux-gnu
 xbuild.sh --tool-dir=$HOME/Desktop/tools --source-dir=/tmp/source arm-eabi
 ```
 #### After setting source and tool directories, **xbuild** performs the following actions:
