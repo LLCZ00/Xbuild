@@ -1,7 +1,7 @@
 #!/bin/bash
 
 _NAME="xbuild.sh"
-_V=1.0
+_V="1.1"
 _AUTHOR="LLCZ00"
 
 help()
@@ -9,24 +9,19 @@ help()
 echo "GCC Cross-Compiler Builder 
 Version: $_V
 Author: $_AUTHOR
-
 Usage: ./$_NAME [options] TARGET
-
 Builds a cross-compiler (CC) for a specified architecture.
 Downloads and installs required dependencies, when necessary.
 (Made for Debian/Ubuntu)
-
 Required:
   TARGET                            Architecture to build CC for
-
 Options:
   -h, --help                        Show usage (this page)
+  -g, --gdb                         Install cross-compiled GDB
   -t, --tool-dir=DIR                CC tool destination (Default: \$HOME/opt/cross)
   -s, --src-dir=DIR                 GCC/Binutils Source Code destination (Default: \$HOME/src)
-
   --gcc-build=--arg,--spaces=no     Additional arguments to pass when configuring GCC
   --bin-build=--arg,--spaces=no     Additional arguments to pass when configuring Binutils
-
 Examples:
 $_NAME i386-elf
 $_NAME --gcc-build=--disable-nls,--enable-languages=c --bin-build=--disable-werror x86_64-pc-linux-gnu
@@ -42,13 +37,12 @@ TARGET=unset
 SOURCE_DIR=$HOME/src
 PREFIX="$HOME/opt/cross"
 
-# Build configuration arguments ( NOT CURRENTLY IN USE )
-GCC_CONFIG="--disable-nls,--enable-languages=c,--disable-libssp,--without-headers"
-BIN_CONFIG="--with-sysroot,--disable-nls,--disable-werror"
+# Build configuration
+GDB_FLAG=0
 
 
 ### Handle Arguments ###
-PARSED_ARGS=$(getopt -a -n $_NAME -o h,t:,s: --long help,tool-dir:,src-dir:,gcc-build:,bin-build: -- "$@")
+PARSED_ARGS=$(getopt -a -n $_NAME -o h,g,t:,s: --long help,gdb,tool-dir:,src-dir:,gcc-build:,bin-build: -- "$@")
 VALID_ARGS=$?
 
 # Catch invalid args
@@ -65,6 +59,11 @@ do
 	case "$1" in
 		-h | --help)
 		help
+		;;
+
+		-g | --gdb)		
+		GDB_FLAG=1
+		shift 1
 		;;
 
 		-t | --tool-dir)		
@@ -104,8 +103,8 @@ done
 # FUNCTIONAL START #
 #######################################################################################################
 
-### Install build-essentials and general CC dependencies ###
-echo "[~] Installing build-essentials and CC dependencies"
+### Install build-essentials and general cross-compiler dependencies ###
+echo "[~] Installing build-essentials and dependencies"
 sudo apt install -y \
 	build-essential \
 	bison \
@@ -137,7 +136,7 @@ if [[ ! -e "$SOURCE_DIR/binutils-2.38" ]]; then
 
 	# Unzip, with or without download
 	echo -n "[~] Unzipping binutils_source.tar.gz..."
-	tar -xf $BIN_SOURCE -C $SOURCE_DST
+	tar -xf $BIN_SOURCE -C $SOURCE_DIR
 	echo "done."
 
 else
@@ -157,13 +156,36 @@ if [[ ! -e "$SOURCE_DIR/gcc-11.3.0" ]]; then
 	fi
 	# Unzip, with or without download
 	echo -n "[~] Unzipping gcc_source.tar.gz..."
-	tar -xf $GCC_SOURCE -C $SOURCE_DST
+	tar -xf $GCC_SOURCE -C $SOURCE_DIR
 	echo "done."
 
 else
 		# If source already exists.. 
 		echo "[OK] GCC Source found, download not required."
 fi
+
+# GDB (optional)
+GDB_SOURCE=$SOURCE_DIR/gdb_source.tar.gz
+if [[ "$GDB_FLAG" -eq "1" ]]; then
+	if [[ ! -e "$SOURCE_DIR/gdb-12.1" ]]; then
+
+		# Download
+		if [[ ! -e "$GDB_SOURCE" ]]; then
+			echo -n "[~] Downloading GDB to '$GDB_SOURCE'..."
+			curl -sS -o $GDB_SOURCE https://ftp.gnu.org/gnu/gdb/gdb-12.1.tar.gz
+			echo "done."
+		fi
+		# Unzip, with or without download
+		echo -n "[~] Unzipping gdb_source.tar.gz..."
+		tar -xf $GDB_SOURCE -C $SOURCE_DIR
+		echo "done."
+
+	else
+			# If source already exists.. 
+			echo "[OK] GDB Source found, download not required."
+	fi
+fi
+
 
 
 ### Build tools ###
@@ -198,6 +220,17 @@ make install-gcc
 make install-target-libgcc
 echo "[OK] GCC built."
 
+# GDB (optional)
+if [[ "$GDB_FLAG" -eq "1" ]]; then
+	echo "[~] Building GDB..."
+	mkdir -p $SOURCE_DIR/gdb-build
+	cd $SOURCE_DIR/gdb-build
+	../gdb-12.1/configure --target=$TARGET --prefix="$PREFIX"
+	make
+	make install
+	echo "[OK] GDB built."
+fi
+
 
 ### Success ###
 
@@ -208,4 +241,4 @@ if [[ ! -e "$PREFIX/bin/$TARGET-ld" || ! -e "$PREFIX/bin/$TARGET-gcc" ]]; then
 fi
 
 echo "[~] $TARGET Cross-Compiler successfully installed!"
-echo -e "\nTool usage:\n$PREFIX/bin/$TARGET-[TOOLNAME]"
+echo -e "\n$PREFIX/bin/$TARGET-[TOOLNAME]"
